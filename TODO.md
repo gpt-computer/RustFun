@@ -326,9 +326,9 @@ HELLO = "world"
 - [x] isolated root filesystem
 - [x] read-only mounts
 - [x] ephemeral `/tmp`
-- [~] cgroups v2
+- [x] cgroups v2 — memory, PID, and CPU limits, each reported per controller (ADR-0021)
 - [x] CPU limits
-- [~] memory limits
+- [x] memory limits
 - [x] process limits
 - [x] seccomp
 - [x] capability dropping

@@ -96,7 +96,9 @@ The `linux` layer, on a host with unprivileged user namespaces enabled, establis
 | Privilege escalation | `PR_SET_NO_NEW_PRIVS` | `no_new_privs` |
 | Syscall escapes | seccomp-BPF (KILL) + fail-closed EPERM list | `seccomp_filter` |
 | Open files / processes / CPU / core / file size | POSIX rlimits | `resource_limits` |
-| Memory | cgroup v2 `memory.max` when the hierarchy is writable | `cgroup_v2` |
+| Memory | cgroup v2 `memory.max` when the hierarchy delegates the controller | `cgroup_memory` |
+| Processes | cgroup v2 `pids.max` | `cgroup_pids` |
+| CPU | cgroup v2 `cpu.max` / `cpu.weight` | `cgroup_cpu` |
 | Environment | `env_clear()` + declared variables + reserved `RUSTFUN_*` | `filtered_environment` |
 | Wasm guest | Wasmtime: no WASI, no imports but `rustfun.payload`, page ceiling, fuel | `wasm_sandbox` |
 

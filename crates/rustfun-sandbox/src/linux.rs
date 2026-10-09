@@ -160,7 +160,7 @@ impl Sandbox for LinuxSandbox {
         let pid_namespace_in_launcher = launcher.is_some();
 
         // cgroup v2 is the only reliable way to cap memory (see ADR-0016). It is optional: many
-        // containers mount the hierarchy read-only, and then the limit is reported as skipped
+        // containers mount the hierarchy read-only, and then each limit is reported as skipped
         // instead of pretending it applies.
         let cgroup = launcher
             .as_ref()
@@ -208,7 +208,7 @@ impl Sandbox for LinuxSandbox {
                     .map(|f| f.0)
                     .unwrap_or(1024),
                 private_tmp: request.scratch_dir.to_string_lossy().into_owned(),
-                cgroup_path: cgroup.clone(),
+                cgroup_path: cgroup.as_ref().map(|provision| provision.path.clone()),
             };
             let encoded = launcher::encode(&spec).map_err(|error| {
                 RustFunError::sandbox(format!("cannot encode the sandbox launcher spec: {error}"))
@@ -391,12 +391,21 @@ impl Sandbox for LinuxSandbox {
         } else {
             report = report.skipped("seccomp_filter");
         }
-        if cgroup.is_some() {
-            report = report.applied("cgroup_v2");
-        } else {
-            report = report
-                .skipped("cgroup_v2")
-                .skipped("memory_limit_not_enforced_without_cgroups");
+        match &cgroup {
+            Some(provision) => {
+                report = report.applied("cgroup_v2");
+                for control in &provision.applied {
+                    report = report.applied(control.as_str());
+                }
+                for control in &provision.skipped {
+                    report = report.skipped(control.as_str());
+                }
+            }
+            None => {
+                report = report
+                    .skipped("cgroup_v2")
+                    .skipped("memory_limit_not_enforced_without_cgroups");
+            }
         }
 
         Ok(SandboxedProcess {
@@ -986,11 +995,27 @@ pub fn apply_post_namespace_controls(
     Ok(())
 }
 
+/// A cgroup v2 directory provisioned for one instance, with what it could and could not do.
+#[derive(Debug, Clone)]
+struct CgroupProvision {
+    /// Directory the launcher moves the payload into.
+    path: String,
+    /// Controllers that were actually written.
+    applied: Vec<String>,
+    /// Controllers that were requested but unavailable.
+    skipped: Vec<String>,
+}
+
 /// Create a cgroup v2 directory for this instance, if the hierarchy is writable.
 ///
-/// Returns the directory the launcher must move the payload into.
+/// Every limit is attempted independently and reported individually: a host may delegate memory
+/// but not CPU, and the isolation report must say which of the two happened rather than
+/// claiming a cgroup exists and leaving the operator to guess what it contains.
 #[cfg(target_os = "linux")]
-fn provision_cgroup(_request: &SandboxRequest, resources: &ResourceLimits) -> Option<String> {
+fn provision_cgroup(
+    _request: &SandboxRequest,
+    resources: &ResourceLimits,
+) -> Option<CgroupProvision> {
     if rustfun_process::platform::cgroup_v2_available() != Some(true) {
         return None;
     }
@@ -1003,28 +1028,77 @@ fn provision_cgroup(_request: &SandboxRequest, resources: &ResourceLimits) -> Op
         .unwrap_or(0);
     let path = root.join(format!("rustfun-{}-{}", std::process::id(), unique));
     std::fs::create_dir(&path).ok()?;
-    if let Ok(controllers) = std::fs::read_to_string(path.join("cgroup.controllers")) {
-        if controllers
-            .split_whitespace()
-            .any(|c| c == "memory" || c == "pids")
-        {
-            let _ = std::fs::write(path.join("memory.max"), resources.memory_bytes.to_string());
-            if let Some(processes) = resources.max_processes {
-                let _ = std::fs::write(path.join("pids.max"), processes.0.to_string());
-            }
-            Some(path.to_string_lossy().into_owned())
+
+    // Controllers must be delegated into a child cgroup before it can use them. Enabling
+    // delegation is best effort: a read-only hierarchy simply leaves the child with no
+    // controllers, which the per-controller checks below report.
+    let _ = std::fs::write(root.join("cgroup.subtree_control"), "+cpu +memory +pids");
+
+    let controllers = std::fs::read_to_string(path.join("cgroup.controllers"))
+        .unwrap_or_default()
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    let mut applied = Vec::new();
+    let mut skipped = Vec::new();
+
+    if controllers.iter().any(|c| c == "memory") {
+        let ceiling = if resources.memory_bytes == 0 {
+            "max".to_owned()
         } else {
-            let _ = std::fs::remove_dir(&path);
-            None
+            resources.memory_bytes.to_string()
+        };
+        if std::fs::write(path.join("memory.max"), ceiling).is_ok() {
+            applied.push("cgroup_memory".to_owned());
+        } else {
+            skipped.push("cgroup_memory".to_owned());
         }
     } else {
-        let _ = std::fs::remove_dir(&path);
-        None
+        skipped.push("cgroup_memory".to_owned());
     }
+
+    if let Some(processes) = resources.max_processes {
+        if controllers.iter().any(|c| c == "pids")
+            && std::fs::write(path.join("pids.max"), processes.0.to_string()).is_ok()
+        {
+            applied.push("cgroup_pids".to_owned());
+        } else {
+            skipped.push("cgroup_pids".to_owned());
+        }
+    }
+
+    if let Some(cpu) = resources.cpu {
+        let written = match cpu {
+            rustfun_model::CpuLimit::Quota { micros, period } => {
+                std::fs::write(path.join("cpu.max"), format!("{micros} {period}")).is_ok()
+            }
+            rustfun_model::CpuLimit::Share(share) => {
+                std::fs::write(path.join("cpu.weight"), share.to_string()).is_ok()
+            }
+        };
+        if controllers.iter().any(|c| c == "cpu") && written {
+            applied.push("cgroup_cpu".to_owned());
+        } else {
+            skipped.push("cgroup_cpu".to_owned());
+        }
+    }
+
+    if applied.is_empty() {
+        let _ = std::fs::remove_dir(&path);
+        return None;
+    }
+    Some(CgroupProvision {
+        path: path.to_string_lossy().into_owned(),
+        applied,
+        skipped,
+    })
 }
 
 #[cfg(not(target_os = "linux"))]
-fn provision_cgroup(_request: &SandboxRequest, _resources: &ResourceLimits) -> Option<String> {
+fn provision_cgroup(
+    _request: &SandboxRequest,
+    _resources: &ResourceLimits,
+) -> Option<CgroupProvision> {
     None
 }
 
@@ -1338,6 +1412,70 @@ mod tests {
             "the report must say what happened to the memory limit: {}",
             started.describe()
         );
+    }
+
+    /// The cgroup report must say which controllers were written.
+    ///
+    /// A cgroup directory can exist while containing nothing usable: the hierarchy may not
+    /// delegate a controller, or the write may fail. Reporting "cgroup_v2 applied" in that case
+    /// would tell the operator their memory limit is enforced when it is not.
+    #[tokio::test]
+    async fn linux_sandbox_reports_each_cgroup_controller() {
+        if skip_unless_available() {
+            return;
+        }
+        if !std::path::Path::new("/bin/sh").exists() {
+            eprintln!("skipping: /bin/sh not available");
+            return;
+        }
+        let sandbox = LinuxSandbox::new();
+        let engine = ProcessEngine::new();
+        let request = SandboxRequest {
+            policy: rustfun_model::SandboxPolicy::linux(),
+            resources: ResourceLimits::default()
+                .with_cpu(rustfun_model::CpuLimit::from_millis_per_second(500).expect("valid")),
+            function_root: std::path::PathBuf::from("/usr"),
+            scratch_dir: std::env::temp_dir().join(format!("rustfun-sb-cg-{}", std::process::id())),
+            command: vec!["/bin/sh".to_owned(), "-c".to_owned(), "true".to_owned()],
+            environment: std::collections::BTreeMap::new(),
+            shutdown_grace: Duration::from_millis(100),
+        };
+        let started = sandbox
+            .start(&engine, request)
+            .await
+            .expect("sandboxed start");
+        let entries: Vec<String> = started
+            .report
+            .applied
+            .iter()
+            .chain(started.report.skipped.iter())
+            .map(|entry| entry.to_lowercase())
+            .collect();
+        let mentions = |name: &str| entries.iter().any(|entry| entry.contains(name));
+        assert!(
+            mentions("cgroup_memory"),
+            "the report must say what happened to the memory limit: {}",
+            started.describe()
+        );
+        assert!(
+            mentions("cgroup_cpu"),
+            "the report must say what happened to the cpu limit: {}",
+            started.describe()
+        );
+        // Either the cgroup was provisioned with both controllers, or it was skipped outright.
+        if !started.report.applied.iter().any(|e| e == "cgroup_v2") {
+            assert!(
+                mentions("memory_limit_not_enforced_without_cgroups"),
+                "an unprovisioned cgroup must explain the consequence: {}",
+                started.describe()
+            );
+        }
+        let status = started
+            .process
+            .wait_timeout(Duration::from_secs(5))
+            .await
+            .expect("waits");
+        assert!(status.is_success(), "{}", started.process.logs().to_text());
     }
 
     #[tokio::test]

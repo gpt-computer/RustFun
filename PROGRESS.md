@@ -49,7 +49,7 @@ Run from the repository root:
 
 ```bash
 cargo fmt --all -- --check                                   # PASS
-cargo test --workspace                                        # PASS (312 tests)
+cargo test --workspace                                        # PASS (316 tests)
 cargo clippy --workspace --all-targets -- -D warnings         # PASS
 ```
 
@@ -64,7 +64,7 @@ Last verified: see the "Tests run" section of the session report.
 | `rustfun-protocol` | 30 | framing, codecs, transports, malformed input |
 | `rustfun-core` | 34 | errors, registry, event bus, metrics, manager lifecycle |
 | `rustfun-process` | 22 | process groups, signals, timeouts, log bounds, env filtering |
-| `rustfun-sandbox` | 29 | isolation layers, seccomp correctness, environment scrubbing, launcher, PID namespace |
+| `rustfun-sandbox` | 32 | isolation layers, seccomp, environment scrubbing, launcher, PID namespace, per-controller cgroup reporting |
 | `rustfun-runtime` | 25 | adapter discovery, preparation, handler resolution, in-process runtime |
 | `rustfun-artifact` | 11 (+ store suite) | determinism, caching, verification, traversal defence, exec bit, bootstrap exclusion |
 | `rustfun-instance` | 9 (+ execution suite) | state machine, leases, cold→warm reuse, scheduling, timeouts |
@@ -77,10 +77,10 @@ Last verified: see the "Tests run" section of the session report.
 
 ## Known limitations
 
-- **cgroup v2 availability.** Memory is enforced with `memory.max` only when the host exposes a
-  writable cgroup hierarchy; most CI containers mount it read-only, and the isolation report
-  then says `memory_limit_not_enforced_without_cgroups` instead of pretending. CPU throttling
-  (`cpu.max`) is not wired up.
+- **cgroup v2 availability.** Limits are enforced only when the hierarchy delegates the
+  controller; most CI containers mount it read-only, and the isolation report then names each
+  controller it could not write instead of pretending. `rustfun doctor` reports the same
+  distinction through the `cgroup_cpu` and `sandbox_launcher` probes.
 - **Launcher discovery.** The PID namespace needs `rustfun-sandbox-init` next to the running
   binary. A development checkout that runs the sandbox tests without that sibling binary falls
   back to the in-process path and reports `pid_namespace` as skipped.

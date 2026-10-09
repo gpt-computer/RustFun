@@ -394,3 +394,27 @@ fn the_wasm_template_builds_and_invokes() {
     assert_eq!(value["result"]["message"], "hello from wasm");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `rustfun doctor` must report the launcher and the CPU controller.
+///
+/// Both decide whether a declared limit is enforced, so an operator reading the doctor output
+/// has to be able to tell a missing binary or an undelegated controller apart from a working
+/// setup.
+#[test]
+fn doctor_reports_the_launcher_and_the_cpu_controller() {
+    let dir = workspace("doctor-cgroup");
+    let output = run(&dir, &["doctor", "--json"]);
+    assert_eq!(output.status, 0, "{}", output.stderr);
+    let report: serde_json::Value = serde_json::from_str(&output.stdout).expect("doctor json");
+    let probes = report["sandbox"].as_array().expect("probe array");
+    for name in ["sandbox_launcher", "cgroup_cpu", "cgroup_v2"] {
+        assert!(
+            probes
+                .iter()
+                .any(|probe| probe["name"].as_str() == Some(name)),
+            "doctor must report the {name} probe: {}",
+            output.stdout
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

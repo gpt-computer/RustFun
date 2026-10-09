@@ -270,3 +270,25 @@ expensive path in the platform and contradicts Wasmtime's own store-lifetime gua
 
 **Consequences:** A guest bug produces a per-invocation error without destroying warm capacity,
 while a guest that lies about the protocol cannot keep serving.
+
+### ADR-0021 — cgroup limits are reported per controller, not per hierarchy
+**Context:** The first cgroup integration reported a single `cgroup_v2` entry. A cgroup
+directory can exist while containing nothing usable: the hierarchy may be mounted without
+delegating a controller into child cgroups, or a write can fail. Reporting "cgroup_v2 applied"
+would tell an operator their memory limit is enforced when it is not.
+
+**Decision:** `provision_cgroup` attempts every requested limit independently and the isolation
+report lists each outcome: `cgroup_memory`, `cgroup_pids`, `cgroup_cpu` appear in `applied` when
+written and in `skipped` when the controller is missing or the write failed. `cpu.max` carries
+the quota (`micros period`) and `cpu.weight` the share, matching the domain model. When nothing
+could be written the directory is removed and the report falls back to
+`memory_limit_not_enforced_without_cgroups`.
+
+**Alternatives:** One umbrella entry (rejected: it cannot express "memory yes, cpu no");
+refusing to start when a controller is missing (rejected: a host that cannot throttle CPU
+should still get memory and PID limits).
+
+**Consequences:** `rustfun doctor` gains a `cgroup_cpu` probe that distinguishes a mounted
+hierarchy from a delegated controller, and a `sandbox_launcher` probe that reports whether
+`rustfun-sandbox-init` is installed, since the PID namespace depends on the binary rather than
+on a kernel capability.
