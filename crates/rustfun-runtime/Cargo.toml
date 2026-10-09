@@ -17,11 +17,13 @@ rustfun-protocol = { workspace = true }
 rustfun-process = { workspace = true }
 rustfun-sandbox = { workspace = true }
 tokio = { workspace = true }
+anyhow = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 nix = { workspace = true }
+wasmtime = { workspace = true }
 which = "6"
 
 [lints]

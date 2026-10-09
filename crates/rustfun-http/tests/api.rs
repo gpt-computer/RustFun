@@ -219,3 +219,59 @@ async fn destroy_removes_the_function() {
         .is_err());
     let _ = std::fs::remove_dir_all(&project);
 }
+
+/// The API must serve a Wasm function end to end.
+///
+/// Wasm runs in-process rather than as a child process, so this exercises a different path
+/// through the API than the echo/node fixtures do: build, instance creation, and invocation all
+/// happen without a process ever being spawned.
+#[tokio::test]
+async fn a_wasm_function_builds_and_invokes_over_http() {
+    let project = temp_project("wasm-api");
+    let dir = project.join("fn");
+    std::fs::create_dir_all(&dir).expect("creates function");
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../rustfun-cli/src/templates/echo.wat"
+        ),
+        dir.join("main.wat"),
+    )
+    .expect("copies module");
+    std::fs::write(
+        dir.join("rustfun.toml"),
+        "name = \"wasmfn\"\nruntime = \"wasm@*\"\nhandler = \"main.wat.rustfun_handler\"\n\n[build]\nsource = \".\"\n\n[sandbox]\nkind = \"wasm\"\n",
+    )
+    .expect("writes manifest");
+
+    let service = Arc::new(
+        InvocationService::new(ServiceConfig::new(&project).with_state_dir(project.join("state")))
+            .await
+            .expect("builds service"),
+    );
+    service.load_project().await.expect("loads project");
+    let server = DevServer::start(Arc::clone(&service), "127.0.0.1:0".parse().expect("addr"))
+        .await
+        .expect("starts server");
+    let address = server.address();
+    std::mem::forget(server);
+
+    let (status, functions) = request(address, "GET", "/functions", None).await;
+    assert_eq!(status, 200);
+    let id = functions[0]["id"].as_str().expect("id").to_owned();
+
+    let (status, _) = request(address, "POST", &format!("/functions/{id}/build"), None).await;
+    assert_eq!(status, 200, "the Wasm module must build through the API");
+
+    let (status, body) = request(
+        address,
+        "POST",
+        &format!("/functions/{id}/invoke"),
+        Some(serde_json::json!({ "payload": { "name": "http" } })),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["status"], "success", "{body}");
+    assert_eq!(body["result"]["message"], "hello from wasm");
+    let _ = std::fs::remove_dir_all(&project);
+}

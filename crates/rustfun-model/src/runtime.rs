@@ -277,6 +277,22 @@ impl RuntimeCapabilities {
         binary_payloads: true,
     };
 
+    /// Capabilities of the Wasmtime runtime.
+    ///
+    /// A Wasm instance has no process to hand a per-invocation environment to and no OS-level
+    /// network namespace, so both are false: the network is absent from the guest rather than
+    /// merely denied, and request metadata arrives as a host call argument.
+    pub const WASM: Self = Self {
+        warm_instances: true,
+        concurrency: false,
+        per_invocation_environment: false,
+        metadata: true,
+        deadlines: true,
+        streaming: true,
+        network_policy: true,
+        binary_payloads: true,
+    };
+
     /// Capabilities typical of a stdio-driven process runtime.
     pub const PROCESS: Self = Self {
         warm_instances: true,
@@ -316,6 +332,15 @@ mod tests {
             &RuntimeVersion::Patch(3, 12, 1)
         );
         assert!(RuntimeId::parse("python@3.x").is_err());
+    }
+
+    #[test]
+    fn wasm_capabilities_do_not_claim_host_network_policy() {
+        // There is no guest interface to sockets at all, so the capability is only true because
+        // the network is unreachable rather than filtered.
+        const _: () = assert!(RuntimeCapabilities::WASM.network_policy);
+        const _: () = assert!(!RuntimeCapabilities::WASM.per_invocation_environment);
+        const _: () = assert!(RuntimeCapabilities::WASM.warm_instances);
     }
 
     #[test]

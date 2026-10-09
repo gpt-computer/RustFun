@@ -49,7 +49,7 @@ Run from the repository root:
 
 ```bash
 cargo fmt --all -- --check                                   # PASS
-cargo test --workspace                                        # PASS (283 tests)
+cargo test --workspace                                        # PASS (312 tests)
 cargo clippy --workspace --all-targets -- -D warnings         # PASS
 ```
 
@@ -72,7 +72,7 @@ Last verified: see the "Tests run" section of the session report.
 | `rustfun-invoke` | 6 | service wiring, project loading, metrics |
 | `rustfun-http` | 8 | routing, status codes, structured errors over real TCP |
 | `rustfun-cli` | 8 (+ cli suite) | argument parsing, templates, full CLI lifecycle |
-| `rustfun-test` | 7 | conformance for echo/node/python/executable, statefulness, linux sandbox |
+| `rustfun-test` | 8 | conformance for echo/node/python/executable/wasm, statefulness, linux sandbox |
 | `rustfun-sdk` | 4 | handler types and request mapping |
 
 ## Known limitations
@@ -94,6 +94,5 @@ Last verified: see the "Tests run" section of the session report.
 
 ## Next executable milestone
 
-Phase 22 (WASM runtime) with Wasmtime and WASI preview 2, or cgroup CPU accounting
-(`cpu.max`) plus a `rustfun doctor` check for launcher availability. Both are unblocked and
-have no external dependency.
+Phase 23 (OCI runtime) or cgroup CPU accounting (`cpu.max`) plus a `rustfun doctor` check for
+launcher availability. Both are unblocked and have no external dependency.

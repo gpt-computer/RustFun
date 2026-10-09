@@ -9,6 +9,7 @@
 //! | [`node`] | `node` + bootstrap on stdio | host or Linux |
 //! | [`python`] | `python3` + bootstrap on stdio | host or Linux |
 //! | [`executable`] | user binary speaking the protocol | host or Linux |
+//! | [`wasm`] | Wasmtime, core-module ABI | the Wasm sandbox |
 //!
 //! Every process-backed runtime speaks the same framed protocol from
 //! [`rustfun_protocol`]; the bootstrap scripts are thin adapters that translate the frame into
@@ -27,12 +28,14 @@ pub mod executable;
 pub mod node;
 pub mod process;
 pub mod python;
+pub mod wasm;
 
 pub use echo::EchoAdapter;
 pub use executable::ExecutableAdapter;
 pub use node::NodeAdapter;
 pub use process::{ProcessInstance, ProcessRuntimeAdapter};
 pub use python::PythonAdapter;
+pub use wasm::{WasmAdapter, WasmInstance};
 
 /// Build a registry with every adapter that RustFun ships.
 ///
@@ -44,6 +47,7 @@ pub fn default_registry() -> RuntimeRegistry {
     registry.register_adapter(Arc::new(PythonAdapter::new()));
     registry.register_adapter(Arc::new(ExecutableAdapter::new()));
     registry.register_adapter(Arc::new(EchoAdapter::new()));
+    registry.register_adapter(Arc::new(WasmAdapter::new()));
     registry
 }
 

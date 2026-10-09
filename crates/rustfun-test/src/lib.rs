@@ -153,6 +153,23 @@ impl ConformanceFixture {
                     error: true,
                 },
             ),
+            rustfun_model::RuntimeFamily::Wasm => (
+                "main.wat.rustfun_handler".to_owned(),
+                vec![
+                    ("main.wat".to_owned(), include_str!("fixtures/wasm_echo.wat").to_owned()),
+                    ("failing.wat".to_owned(), include_str!("fixtures/wasm_failing.wat").to_owned()),
+                ],
+                FixtureCapabilities {
+                    // A Wasm guest has no environment to observe and no wall-clock sleep, so
+                    // those two checks are reported as not exercised instead of being faked
+                    // with a host call that would prove nothing about the sandbox.
+                    environment: false,
+                    // Fuel, not the deadline, is what bounds a guest that never yields: the
+                    // call runs to completion (or traps) before the deadline can fire.
+                    timeout: false,
+                    error: true,
+                },
+            ),
             rustfun_model::RuntimeFamily::Executable => {
                 // The executable runtime ships its own conforming binary, built by the test
                 // harness from `rustfun-test`'s helper source.
@@ -317,6 +334,14 @@ pub async fn run_family_with(
     options: ConformanceOptions,
 ) -> ConformanceReport {
     let runtime = RuntimeId::new(family, rustfun_model::RuntimeVersion::Any);
+    // The layer a family is actually driven with. Wasm is the exception: the Wasm sandbox *is*
+    // its isolation, and the adapter refuses `host`, so asking for `host` would mean "no
+    // isolation at all" rather than "the default".
+    let sandbox = if family == rustfun_model::RuntimeFamily::Wasm {
+        SandboxPolicy::wasm()
+    } else {
+        options.sandbox.clone()
+    };
     let mut report = ConformanceReport {
         family: family.name().to_owned(),
         ran: false,
@@ -346,7 +371,7 @@ pub async fn run_family_with(
 
     let spec = fixture.spec(runtime.to_string().as_str(), &fixture.handler);
     let spec = match spec {
-        Ok(spec) => Arc::new((*spec).clone().with_sandbox(options.sandbox.clone())),
+        Ok(spec) => Arc::new((*spec).clone().with_sandbox(sandbox.clone())),
         Err(err) => {
             fixture.cleanup();
             report.skip_reason = Some(err.to_string());
@@ -417,7 +442,7 @@ pub async fn run_family_with(
             &[("CONFORMANCE_VALUE", "from-manifest")],
         );
         if let Ok(env_spec) = env_spec {
-            let env_spec = Arc::new((*env_spec).clone().with_sandbox(options.sandbox.clone()));
+            let env_spec = Arc::new((*env_spec).clone().with_sandbox(sandbox.clone()));
             if let Ok(prepared) = adapter
                 .prepare(PrepareRequest::new(
                     env_spec.id.clone(),
@@ -478,6 +503,7 @@ pub async fn run_family_with(
         let slow_spec =
             fixture.spec_with_environment(runtime.to_string().as_str(), slow_handler, slow_extra);
         if let Ok(slow_spec) = slow_spec {
+            let slow_spec = Arc::new((*slow_spec).clone().with_sandbox(sandbox.clone()));
             if let Ok(prepared) = adapter
                 .prepare(PrepareRequest::new(
                     slow_spec.id.clone(),
@@ -520,6 +546,7 @@ pub async fn run_family_with(
         rustfun_model::RuntimeFamily::Node | rustfun_model::RuntimeFamily::Python => {
             "failing.handler"
         }
+        rustfun_model::RuntimeFamily::Wasm => "failing.wat.rustfun_handler",
         _ => fixture.handler.as_str(),
     };
     let failing_extra: &[(&str, &str)] =
@@ -537,6 +564,7 @@ pub async fn run_family_with(
             failing_extra,
         );
         if let Ok(failing_spec) = failing_spec {
+            let failing_spec = Arc::new((*failing_spec).clone().with_sandbox(sandbox.clone()));
             if let Ok(prepared) = adapter
                 .prepare(PrepareRequest::new(
                     failing_spec.id.clone(),

@@ -355,3 +355,42 @@ fn invoking_a_function_keeps_the_artifact_verifiable() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// The Wasm template must produce a function that actually runs.
+///
+/// The template used to scaffold a Rust crate and declare `kind = "host"`, which the Wasm
+/// adapter refuses: the scaffold looked complete and could never be invoked.
+#[test]
+fn the_wasm_template_builds_and_invokes() {
+    let dir = workspace("wasm-template");
+    let created = run(&dir, &["init", "hello-wasm", "--template", "wasm"]);
+    assert_eq!(created.status, 0, "{}", created.stderr);
+
+    let root = dir.join("hello-wasm");
+    let manifest = std::fs::read_to_string(root.join("rustfun.toml")).expect("manifest");
+    assert!(
+        manifest.contains("kind = \"wasm\""),
+        "the manifest must select the Wasm sandbox layer:\n{manifest}"
+    );
+    assert!(manifest.contains("rustfun_handler"));
+
+    let built = run(&dir, &["build", "hello-wasm", "--json"]);
+    assert_eq!(built.status, 0, "{}", built.stderr);
+
+    let invoked = run(
+        &dir,
+        &[
+            "function",
+            "invoke",
+            "hello-wasm",
+            "--payload",
+            "{\"name\":\"world\"}",
+            "--json",
+        ],
+    );
+    assert_eq!(invoked.status, 0, "{}", invoked.stderr);
+    let value: serde_json::Value = serde_json::from_str(&invoked.stdout).expect("invoke json");
+    assert_eq!(value["status"], "success", "{}", invoked.stdout);
+    assert_eq!(value["result"]["message"], "hello from wasm");
+    let _ = std::fs::remove_dir_all(&dir);
+}

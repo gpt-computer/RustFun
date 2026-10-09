@@ -44,6 +44,7 @@ rustfun-http = { path = "crates/rustfun-http", version = "0.1.0" }
 rustfun-test = { path = "crates/rustfun-test", version = "0.1.0" }
 rustfun-sdk = { path = "crates/rustfun-sdk", version = "0.1.0" }
 
+anyhow = "1"
 async-trait = "0.1"
 base64 = "0.22"
 bytes = "1"
@@ -85,12 +86,15 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 walkdir = "2"
+# Core-module Wasm only: RustFun drives modules through the core ABI, so the component model
+# and the WASI component (`wasmtime-wasi`) are deliberately not pulled in.
 wasmtime = { version = "26", default-features = false, features = [
     "cranelift",
     "runtime",
     "std",
-    "wasi",
     "gc",
+    "wat",
+    "parallel-compilation",
 ] }
 
 [workspace.lints.rust]

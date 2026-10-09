@@ -88,7 +88,7 @@ Lifecycle transitions should emit structured events.
 | `rustfun-core` | errors, runtime traits, registry, event bus, metrics, function manager | pooling, adapters, CLI |
 | `rustfun-process` | every `execve` in the workspace | policy about when to start |
 | `rustfun-sandbox` | host / Linux isolation layers and capability probes | runtime-specific concerns |
-| `rustfun-runtime` | node, python, executable, echo adapters | pooling or scheduling |
+| `rustfun-runtime` | node, python, executable, echo, wasm adapters | pooling or scheduling |
 | `rustfun-artifact` | build staging, deterministic packing, content-addressed cache | lifecycle decisions |
 | `rustfun-instance` | state machine, warm pool, scheduler | runtime behaviour |
 | `rustfun-config` | `rustfun.toml` parsing and validation | running anything |

@@ -5,6 +5,14 @@ All notable changes to RustFun.
 ## [Unreleased]
 
 ### Added
+- Wasm runtime: `WasmAdapter` on Wasmtime with a core-module ABI, `rustfun.payload` host
+  function, `StoreLimits` memory ceiling, fuel budget, bounded module cache, and warm reuse
+  (ADR-0018, ADR-0019, ADR-0020).
+- `rustfun init --template wasm` scaffolds a runnable WAT module that selects the `wasm`
+  sandbox layer; it previously scaffolded a Rust crate that could never be invoked.
+- Wasm conformance test, CLI template test, and HTTP build/invoke test for the Wasm path.
+
+### Added
 - Linux PID namespace via the `rustfun-sandbox-init` launcher; the payload runs as PID 1
   (ADR-0017).
 - cgroup v2 `memory.max`/`pids.max` provisioning when the hierarchy is writable (ADR-0016).

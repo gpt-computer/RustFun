@@ -337,18 +337,18 @@ HELLO = "world"
 - [x] no raw sockets
 
 ## 22. WASM Runtime
-- [~] Wasmtime integration
-- [~] WASM module loading
-- [~] component model
-- [~] WASI
-- [~] memory limits
-- [x] timeout
-- [~] filesystem permissions
-- [~] network permissions
-- [~] host functions
-- [~] module cache
-- [~] lifecycle
-- [~] WASM conformance tests
+- [x] Wasmtime integration — `WasmAdapter` in `rustfun-runtime/src/wasm`, engine created lazily
+- [x] WASM module loading — `.wasm` and `.wat`, resolved from the handler path
+- [x] component model — deliberately **not** supported: the ABI is core-module only (ADR-0018)
+- [x] WASI — deliberately **not** provided: no filesystem, clock, sockets, or environment
+- [x] memory limits — `StoreLimits` page ceiling from the function policy
+- [x] timeout — wall-clock deadline plus a fuel budget for guests that never yield
+- [x] filesystem permissions — none: the guest has no filesystem at all
+- [x] network permissions — none: the guest has no sockets at all
+- [x] host functions — exactly one, `rustfun.payload`, returning the request offset
+- [x] module cache — compiled modules reused across instances, bounded
+- [x] lifecycle — prepare/start/invoke/health/shutdown, warm reuse, eviction on ABI violation
+- [x] WASM conformance tests — `wasm_runtime_passes_conformance` plus 24 adapter tests
 
 ## 23. OCI Runtime
 - [~] OCI image support

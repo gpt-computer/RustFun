@@ -12,6 +12,7 @@ fn installed() -> Vec<RuntimeFamily> {
         RuntimeFamily::Node,
         RuntimeFamily::Python,
         RuntimeFamily::Executable,
+        RuntimeFamily::Wasm,
     ]
 }
 
@@ -42,6 +43,14 @@ async fn python_runtime_passes_conformance() {
         eprintln!("{}", report.render());
         return;
     }
+    assert!(report.passed(), "{}", report.render());
+}
+
+#[tokio::test]
+async fn wasm_runtime_passes_conformance() {
+    let registry = rustfun_runtime::default_registry();
+    let report = run_family(&registry, RuntimeFamily::Wasm).await;
+    assert!(report.ran, "{}", report.render());
     assert!(report.passed(), "{}", report.render());
 }
 

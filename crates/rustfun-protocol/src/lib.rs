@@ -66,7 +66,10 @@ mod transport;
 
 pub use codec::Codec;
 pub use error::{human_readable, machine_readable, ProtocolError, ProtocolResult};
-pub use frame::{decode_frame, encode_frame, FrameHeader, MAX_FRAME_BYTES, PROTOCOL_MAGIC};
+pub use frame::{
+    decode_frame, encode_frame, peek_frame_length, FrameHeader, HEADER_LEN, MAX_FRAME_BYTES,
+    PROTOCOL_MAGIC,
+};
 pub use response::{InvocationError, InvocationResponse, InvocationStatus, LogEntry, Metrics};
 #[doc(no_inline)]
 pub use rustfun_model as model;

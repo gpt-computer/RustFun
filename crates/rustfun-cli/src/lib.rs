@@ -107,6 +107,17 @@ impl Template {
             Template::Echo => "echo@*",
         }
     }
+
+    /// Sandbox layer the template's manifest selects.
+    ///
+    /// A Wasm module is confined by Wasmtime, so it declares the `wasm` layer; the process
+    /// templates declare `host`, which the CLI reports as insecure rather than pretending.
+    pub fn sandbox_kind(self) -> &'static str {
+        match self {
+            Template::Wasm => "wasm",
+            _ => "host",
+        }
+    }
 }
 
 /// Arguments for `rustfun init`.
@@ -305,14 +316,15 @@ fn scaffold(root: &Path, name: &str, template: Template, force: bool) -> std::io
 
 fn write_template(directory: &Path, name: &str, template: Template) -> std::io::Result<()> {
     let manifest = format!(
-        "name = \"{name}\"\nruntime = \"{}\"\nhandler = \"{}\"\n\n[build]\nsource = \".\"\n\n[resources]\nmemory = \"512MiB\"\ntimeout = \"30s\"\n\n[sandbox]\nkind = \"host\"\n\n[environment]\n",
+        "name = \"{name}\"\nruntime = \"{}\"\nhandler = \"{}\"\n\n[build]\nsource = \".\"\n\n[resources]\nmemory = \"512MiB\"\ntimeout = \"30s\"\n\n[sandbox]\nkind = \"{}\"\n\n[environment]\n",
         template.runtime(),
         match template {
             Template::Node | Template::Echo => "index.handler",
             Template::Python => "main.handler",
-            Template::Rust | Template::Wasm => "./handler",
-            Template::Executable => "./handler",
-        }
+            Template::Wasm => "main.wat.rustfun_handler",
+            Template::Rust | Template::Executable => "./handler",
+        },
+        template.sandbox_kind(),
     );
     std::fs::write(directory.join("rustfun.toml"), manifest)?;
 
@@ -333,7 +345,7 @@ fn write_template(directory: &Path, name: &str, template: Template) -> std::io::
                 "\"\"\"RustFun Python template.\"\"\"\n\n\ndef handler(event, context=None):\n    name = (event or {}).get(\"name\", \"world\")\n    return {\"message\": f\"hello {name}\"}\n",
             )?;
         }
-        Template::Rust | Template::Wasm => {
+        Template::Rust => {
             std::fs::write(
                 directory.join("Cargo.toml"),
                 "[package]\nname = \"rustfun-function\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nrustfun-sdk = \"0.1\"\n\n[[bin]]\nname = \"handler\"\npath = \"src/main.rs\"\n",
@@ -341,6 +353,19 @@ fn write_template(directory: &Path, name: &str, template: Template) -> std::io::
             std::fs::write(
                 directory.join("src/main.rs"),
                 "//! RustFun Rust template. Build with `cargo build --release` and point\n//! `[build] command` at the produced binary.\n\nfn main() {\n    println!(\"hello from rustfun\");\n}\n",
+            )?;
+        }
+        Template::Wasm => {
+            // The template is a WAT module so `rustfun init --template wasm` produces something
+            // that runs immediately: wasmtime compiles text modules, and a real project swaps
+            // this for the `.wasm` its toolchain emits.
+            std::fs::write(
+                directory.join("main.wat"),
+                include_str!("templates/echo.wat"),
+            )?;
+            std::fs::write(
+                directory.join("README.md"),
+                "# RustFun Wasm function\n\n`main.wat` is the module RustFun runs. It is written in\nWebAssembly text format so it works without a toolchain; a real project would\npoint the handler at the `.wasm` its compiler emits.\n\nThe guest ABI is documented in\n`crates/rustfun-runtime/src/wasm/abi.rs`:\n\n- export `memory`,\n- export `rustfun_handler() -> i32` returning the length of a response frame,\n- optionally import `rustfun.payload` to learn where the request frame was written.\n\n```sh\nrustfun build hello-wasm\nrustfun function invoke hello-wasm --payload '{\"name\":\"world\"}'\n```\n",
             )?;
         }
         Template::Executable => {

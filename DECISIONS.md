@@ -216,3 +216,57 @@ directly from tokio (rejected: unsafe fork/exec machinery in a multi-threaded ru
 which is the normal case for an installed binary. The launcher is located next to the running
 executable, so a release build gets PID isolation by default; development checkouts without
 the sibling binary fall back to the in-process path and report the skip.
+
+### ADR-0018 — The Wasm runtime is core-module only, with no WASI
+**Context:** Wasmtime supports two guest shapes: core modules (a flat linear memory plus
+exported functions) and components (the component model with typed interfaces and WASI preview 2).
+Supporting both would double the ABI surface for a second guest language that no caller asked for.
+
+**Decision:** RustFun runs **core modules** that export `memory` and `rustfun_handler() -> i32`.
+There is no WASI: no filesystem, no clock, no sockets, no environment, no `argv`. The guest
+reaches the host through exactly one import, `rustfun.payload`, which returns the offset of the
+request frame the host already wrote.
+
+**Alternatives:** WASI preview 2 (rejected: it grants a filesystem and clock by default, which
+reopens the sandbox questions the Wasm layer is meant to close); the component model (rejected:
+typed imports/exports are a second ABI for no current caller).
+
+**Consequences:** A Wasm function is confined by construction — there is no ambient authority to
+revoke. The trade-off is that a guest cannot read a file or check the time, which is the point of
+the layer. Guests that need input beyond the invocation payload must get it through the request.
+
+### ADR-0019 — The guest owns a status byte and a body; the host owns everything else
+**Context:** A Wasm guest could in principle return a complete `InvocationResponse` frame, but
+that would let it forge the invocation id, the function id, the duration, and the instance id.
+
+**Decision:** The response body is `[status: u8][payload bytes]`:
+
+| status | meaning | payload |
+| --- | --- | --- |
+| `0x00` | success | the response body, verbatim (JSON or binary) |
+| `0x01` | failure | a UTF-8 message |
+
+The host wraps the payload in a real `InvocationResponse` and stamps identity, timing, and
+metrics. A guest that writes anything else is a `RUSTFUN_WASM_BAD_RESPONSE` function error and
+the instance is evicted.
+
+**Alternatives:** Full response frames from the guest (rejected: forgery); a JSON-only body
+(rejected: `binary_payloads` is a declared capability and Wasm is the natural home for it).
+
+**Consequences:** The ABI is two bytes wide, which keeps hand-written guests (including the WAT
+fixtures and the CLI template) trivial, and keeps the host the only source of truth about what
+happened.
+
+### ADR-0020 — A trapped guest does not invalidate the instance
+**Context:** The first implementation evicted an instance whose guest trapped. Wasmtime traps
+unwind cleanly inside the guest, leaving the store valid.
+
+**Decision:** A trap is reported as `RUSTFUN_WASM_ERROR` and the instance keeps serving. An
+out-of-bounds frame, an unknown status byte, or a request that does not fit the memory policy is
+an ABI violation and evicts the instance.
+
+**Alternatives:** Evict on every trap (rejected: it makes ordinary error handling the most
+expensive path in the platform and contradicts Wasmtime's own store-lifetime guarantees).
+
+**Consequences:** A guest bug produces a per-invocation error without destroying warm capacity,
+while a guest that lies about the protocol cannot keep serving.

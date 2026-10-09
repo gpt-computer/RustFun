@@ -98,9 +98,18 @@ The `linux` layer, on a host with unprivileged user namespaces enabled, establis
 | Open files / processes / CPU / core / file size | POSIX rlimits | `resource_limits` |
 | Memory | cgroup v2 `memory.max` when the hierarchy is writable | `cgroup_v2` |
 | Environment | `env_clear()` + declared variables + reserved `RUSTFUN_*` | `filtered_environment` |
+| Wasm guest | Wasmtime: no WASI, no imports but `rustfun.payload`, page ceiling, fuel | `wasm_sandbox` |
 
 Anything not established appears in `IsolationReport::skipped` with a reason, and
 `rustfun doctor` reports the host capabilities behind those decisions.
+
+### The Wasm layer
+
+A Wasm function is confined by construction rather than by revocation: there is no filesystem, no
+clock, no sockets, no environment, and no `argv`. The only host function is `rustfun.payload`,
+which returns an offset into memory the host already filled — it cannot leak a Rust pointer or an
+allocation the guest could keep. Memory growth is capped by `StoreLimits`, and a guest that never
+yields burns fuel and traps instead of occupying a thread (ADR-0018, ADR-0020).
 
 ### Two limits worth stating plainly
 
