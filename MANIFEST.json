@@ -1,0 +1,21 @@
+{
+  "name": "rustfun-agent-kit",
+  "purpose": "Autonomous implementation kit for a Rust-native vercel/fun successor",
+  "files": [
+    "AGENT-LAUNCH.md",
+    "README.md",
+    "AGENTS.md",
+    "TODO.md",
+    "DECISIONS.md",
+    "PROGRESS.md",
+    "PROMPT.md",
+    "ARCHITECTURE.md",
+    "REFERENCE-NOTE.md",
+    ".agent/skills/performance.md",
+    ".agent/skills/implementation.md",
+    ".agent/skills/security.md",
+    ".agent/skills/sandbox.md",
+    ".agent/skills/runtime.md",
+    ".agent/skills/testing.md"
+  ]
+}

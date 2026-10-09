@@ -1,0 +1,40 @@
+[package]
+name = "rustfun-cli"
+description = "RustFun command line interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-core = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-config = { workspace = true }
+rustfun-runtime = { workspace = true }
+rustfun-artifact = { workspace = true }
+rustfun-instance = { workspace = true }
+rustfun-invoke = { workspace = true }
+rustfun-http = { workspace = true }
+rustfun-sandbox = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+rustfun-protocol = { workspace = true }
+
+[[bin]]
+name = "rustfun"
+path = "src/main.rs"
+
+[dev-dependencies]
+rustfun-config = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

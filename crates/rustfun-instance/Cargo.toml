@@ -1,0 +1,31 @@
+[package]
+name = "rustfun-instance"
+description = "RustFun instance manager, warm pool, and scheduler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-core = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-events = { workspace = true }
+rustfun-runtime = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+rustfun-artifact = { workspace = true }
+rustfun-events = { workspace = true }
+rustfun-protocol = { workspace = true }
+
+[lints]
+workspace = true

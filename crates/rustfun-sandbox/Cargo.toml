@@ -1,0 +1,37 @@
+[package]
+name = "rustfun-sandbox"
+description = "RustFun isolation layers: host, Linux namespaces/cgroups/seccomp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-core = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-process = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+nix = { workspace = true }
+libc = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+
+[dependencies.base64]
+workspace = true
+[dependencies.serde_json]
+workspace = true
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rustfun-sandbox-init"
+path = "src/bin/rustfun-sandbox-init.rs"

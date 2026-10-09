@@ -1,0 +1,32 @@
+[package]
+name = "rustfun-http"
+description = "RustFun local development HTTP API"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-core = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-invoke = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+rustfun-config = { workspace = true }
+http-body-util = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+rustfun-config = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-events = { workspace = true }
+
+[lints]
+workspace = true

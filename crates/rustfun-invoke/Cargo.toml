@@ -1,0 +1,28 @@
+[package]
+name = "rustfun-invoke"
+description = "RustFun invocation service facade"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-core = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-protocol = { workspace = true }
+rustfun-instance = { workspace = true }
+rustfun-artifact = { workspace = true }
+rustfun-runtime = { workspace = true }
+rustfun-config = { workspace = true }
+rustfun-events = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

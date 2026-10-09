@@ -1,0 +1,125 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rustfun-model",
+    "crates/rustfun-events",
+    "crates/rustfun-protocol",
+    "crates/rustfun-core",
+    "crates/rustfun-process",
+    "crates/rustfun-sandbox",
+    "crates/rustfun-runtime",
+    "crates/rustfun-artifact",
+    "crates/rustfun-instance",
+    "crates/rustfun-config",
+    "crates/rustfun-invoke",
+    "crates/rustfun-http",
+    "crates/rustfun-cli",
+    "crates/rustfun-test",
+    "crates/rustfun-sdk",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rustfun/rustfun"
+authors = ["RustFun contributors"]
+keywords = ["serverless", "functions", "runtime", "sandbox", "wasm"]
+categories = ["command-line-utilities", "wasm"]
+
+[workspace.dependencies]
+rustfun-model = { path = "crates/rustfun-model", version = "0.1.0" }
+rustfun-events = { path = "crates/rustfun-events", version = "0.1.0" }
+rustfun-protocol = { path = "crates/rustfun-protocol", version = "0.1.0" }
+rustfun-core = { path = "crates/rustfun-core", version = "0.1.0" }
+rustfun-process = { path = "crates/rustfun-process", version = "0.1.0" }
+rustfun-sandbox = { path = "crates/rustfun-sandbox", version = "0.1.0" }
+rustfun-runtime = { path = "crates/rustfun-runtime", version = "0.1.0" }
+rustfun-artifact = { path = "crates/rustfun-artifact", version = "0.1.0" }
+rustfun-instance = { path = "crates/rustfun-instance", version = "0.1.0" }
+rustfun-config = { path = "crates/rustfun-config", version = "0.1.0" }
+rustfun-invoke = { path = "crates/rustfun-invoke", version = "0.1.0" }
+rustfun-http = { path = "crates/rustfun-http", version = "0.1.0" }
+rustfun-test = { path = "crates/rustfun-test", version = "0.1.0" }
+rustfun-sdk = { path = "crates/rustfun-sdk", version = "0.1.0" }
+
+async-trait = "0.1"
+base64 = "0.22"
+bytes = "1"
+clap = { version = "4", features = ["derive", "env"] }
+ctrlc = { version = "3", features = ["termination"] }
+flate2 = "1"
+futures = "0.3"
+fs2 = "0.4"
+hex = "0.4"
+http = "1"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+libc = "0.2"
+nix = { version = "0.29", features = [
+    "process",
+    "signal",
+    "user",
+    "fs",
+    "mount",
+    "sched",
+    "resource",
+] }
+proc-macro2 = "1"
+quote = "1"
+rand = "0.8"
+rmp-serde = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+syn = { version = "2", features = ["full"] }
+tar = "0.4"
+tempfile = "3"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+toml = "0.8"
+toml_edit = "0.22"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+wasmtime = { version = "26", default-features = false, features = [
+    "cranelift",
+    "runtime",
+    "std",
+    "wasi",
+    "gc",
+] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# `RustFunError` carries a human message plus structured context, so every `Result<T>` in the
+# platform is a few hundred bytes wide by design. Boxing the error would trade readability at
+# hundreds of call sites for bytes that are only materialized on failure paths.
+result_large_err = "allow"
+# Platform code intentionally uses infallible-looking conversions (e.g. `Cow::into_owned`)
+# where the intent is to end the borrow rather than to copy.
+needless_pass_by_value = "allow"
+todo = "warn"
+dbg_macro = "warn"
+# `unwrap_used` / `expect_used` / `panic` / `print_stdout` are deliberately not denied
+# workspace-wide: they are legitimate in tests, CLI presentation, and examples. Production
+# library code must avoid them (see CONTRIBUTING.md).
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.bench]
+opt-level = 3
+lto = "thin"

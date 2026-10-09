@@ -1,0 +1,31 @@
+[package]
+name = "rustfun-test"
+description = "RustFun runtime conformance and compatibility test harness"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-core = { workspace = true }
+rustfun-model = { workspace = true }
+rustfun-protocol = { workspace = true }
+rustfun-runtime = { workspace = true }
+rustfun-artifact = { workspace = true }
+rustfun-process = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+rustfun-runtime = { workspace = true }
+rustfun-sandbox = { workspace = true }
+base64 = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
