@@ -13,6 +13,7 @@ fn installed() -> Vec<RuntimeFamily> {
         RuntimeFamily::Python,
         RuntimeFamily::Executable,
         RuntimeFamily::Wasm,
+        RuntimeFamily::Oci,
     ]
 }
 
@@ -63,6 +64,22 @@ async fn executable_runtime_passes_conformance() {
         return;
     }
     assert!(report.passed(), "{}", report.render());
+}
+
+/// The OCI runtime must either run the contract or explain, in one line, why it cannot here.
+#[tokio::test]
+async fn oci_runtime_is_conformant_or_explains_its_unavailability() {
+    let registry = rustfun_runtime::default_registry();
+    let report = run_family(&registry, RuntimeFamily::Oci).await;
+    if report.ran {
+        assert!(report.passed(), "{}", report.render());
+        return;
+    }
+    let reason = report.skip_reason.expect("a skip must carry a reason");
+    assert!(
+        reason.contains("container runtime"),
+        "the skip must name what is missing, not just say the runtime is absent: {reason}"
+    );
 }
 
 #[tokio::test]

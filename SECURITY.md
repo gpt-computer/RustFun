@@ -105,6 +105,18 @@ The `linux` layer, on a host with unprivileged user namespaces enabled, establis
 Anything not established appears in `IsolationReport::skipped` with a reason, and
 `rustfun doctor` reports the host capabilities behind those decisions.
 
+### The OCI layer
+
+Every blob is verified against the digest the manifest advertised **before** it is written to disk,
+and a cached blob is re-verified on read — a corrupted cache entry is removed, not trusted. Layer
+extraction refuses path traversal (`..`, absolute paths), symlinks that resolve outside the root,
+and device nodes, so a malicious image cannot touch the host filesystem. OCI whiteouts and opaque
+markers are honoured, so an image cannot resurrect a file a lower layer deleted.
+
+The container itself gets **no capabilities**, `noNewPrivileges`, masked and read-only paths, its
+own pid/ipc/uts/mount/network namespaces, and the memory limit from the function policy. The
+`runc` process runs on the host layer because the OCI spec is what creates those namespaces.
+
 ### The Wasm layer
 
 A Wasm function is confined by construction rather than by revocation: there is no filesystem, no

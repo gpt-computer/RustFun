@@ -77,6 +77,16 @@ impl RuntimeDiscovery {
         self
     }
 
+    /// Set the availability flag explicitly.
+    ///
+    /// Availability is a claim about the host, not a default: an adapter that discovered a binary
+    /// which cannot actually run must say so rather than inheriting the optimistic default.
+    #[must_use]
+    pub fn with_available(mut self, available: bool) -> Self {
+        self.available = available;
+        self
+    }
+
     /// Mark the runtime as unavailable.
     #[must_use]
     pub fn unavailable(mut self) -> Self {

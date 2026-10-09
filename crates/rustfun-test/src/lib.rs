@@ -359,7 +359,14 @@ pub async fn run_family_with(
 
     let discovery = adapter.discover().await.unwrap_or_default();
     if !discovery.is_empty() && !discovery.iter().any(|d| d.available) {
-        report.skip_reason = Some(format!("{runtime} is not installed on this host",));
+        // Use the adapter's own words: "not installed" and "installed but cannot run" are very
+        // different problems, and the operator needs the difference.
+        let detail = discovery
+            .iter()
+            .find(|entry| !entry.available)
+            .and_then(|entry| entry.reported_version.clone())
+            .unwrap_or_else(|| "not installed on this host".to_owned());
+        report.skip_reason = Some(format!("{runtime}: {detail}"));
         return report;
     }
 

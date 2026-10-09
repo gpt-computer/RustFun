@@ -1,0 +1,30 @@
+[package]
+name = "rustfun-oci"
+description = "OCI image pull, verification, caching, and layer extraction for RustFun"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustfun-model = { workspace = true }
+rustfun-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+which = "6"
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[lints]
+workspace = true

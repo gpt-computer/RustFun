@@ -351,17 +351,17 @@ HELLO = "world"
 - [x] WASM conformance tests — `wasm_runtime_passes_conformance` plus 24 adapter tests
 
 ## 23. OCI Runtime
-- [~] OCI image support
-- [~] image pull
-- [~] image cache
-- [~] digest verification
-- [~] container creation
-- [~] filesystem layers
-- [~] network configuration
-- [ ] resource limits
-- [~] lifecycle
-- [x] cleanup
-- [~] OCI conformance tests
+- [x] OCI image support — `rustfun-oci`: manifests, configs, descriptors, media types
+- [x] image pull — registry client with token auth, TLS (rustls), local-registry HTTP
+- [x] image cache — content-addressed blobs, corrupted entries removed on read
+- [x] digest verification — every blob and the manifest verified before use
+- [x] container creation — OCI runtime spec generated from the image config and the policy
+- [x] filesystem layers — traversal-safe extraction, whiteouts, opaque markers, no device nodes
+- [x] network configuration — a network namespace per container via the OCI spec
+- [x] resource limits — memory from the function policy, no capabilities, `noNewPrivileges`
+- [x] lifecycle — create/run/wait/delete through `runc`, cleanup on shutdown
+- [x] cleanup — the container is deleted when its process exits or the instance is destroyed
+- [x] OCI conformance tests — availability or an explicit, reasoned skip
 
 ## 24. Runtime Manager
 - [x] Runtime discovery

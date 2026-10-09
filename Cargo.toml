@@ -12,6 +12,7 @@ members = [
     "crates/rustfun-instance",
     "crates/rustfun-config",
     "crates/rustfun-invoke",
+    "crates/rustfun-oci",
     "crates/rustfun-http",
     "crates/rustfun-cli",
     "crates/rustfun-test",
@@ -40,6 +41,7 @@ rustfun-artifact = { path = "crates/rustfun-artifact", version = "0.1.0" }
 rustfun-instance = { path = "crates/rustfun-instance", version = "0.1.0" }
 rustfun-config = { path = "crates/rustfun-config", version = "0.1.0" }
 rustfun-invoke = { path = "crates/rustfun-invoke", version = "0.1.0" }
+rustfun-oci = { path = "crates/rustfun-oci", version = "0.1.0" }
 rustfun-http = { path = "crates/rustfun-http", version = "0.1.0" }
 rustfun-test = { path = "crates/rustfun-test", version = "0.1.0" }
 rustfun-sdk = { path = "crates/rustfun-sdk", version = "0.1.0" }
@@ -88,6 +90,13 @@ uuid = { version = "1", features = ["v4", "serde"] }
 walkdir = "2"
 # Core-module Wasm only: RustFun drives modules through the core ABI, so the component model
 # and the WASI component (`wasmtime-wasi`) are deliberately not pulled in.
+# The OCI registry client. rustls is used instead of native-tls so the platform links one TLS
+# stack and never touches the host's OpenSSL.
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "json",
+    "stream",
+] }
 wasmtime = { version = "26", default-features = false, features = [
     "cranelift",
     "runtime",

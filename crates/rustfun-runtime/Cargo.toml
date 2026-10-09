@@ -15,6 +15,7 @@ rustfun-core = { workspace = true }
 rustfun-model = { workspace = true }
 rustfun-protocol = { workspace = true }
 rustfun-process = { workspace = true }
+rustfun-oci = { workspace = true }
 rustfun-sandbox = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }

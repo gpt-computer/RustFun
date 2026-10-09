@@ -57,7 +57,8 @@ cargo run --bin rustfun -- function invoke demo --payload '{"name":"world"}'
 | `rustfun-core` | Errors, runtime traits, registry, function manager, observability |
 | `rustfun-process` | Centralized process lifecycle engine |
 | `rustfun-sandbox` | Isolation layers (host, Linux namespaces/cgroups/seccomp) |
-| `rustfun-runtime` | Runtime adapters (node, python, executable, rust, wasm, oci) |
+| `rustfun-runtime` | Runtime adapters (node, python, executable, echo, wasm, oci) |
+| `rustfun-oci` | OCI image references, pull, verification, cache, and layer extraction |
 | `rustfun-artifact` | Artifact builder and content-addressed cache |
 | `rustfun-instance` | Instance manager, warm pool, scheduler |
 | `rustfun-config` | `rustfun.toml` manifest parsing, defaults, validation |

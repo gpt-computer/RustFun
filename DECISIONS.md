@@ -292,3 +292,43 @@ should still get memory and PID limits).
 hierarchy from a delegated controller, and a `sandbox_launcher` probe that reports whether
 `rustfun-sandbox-init` is installed, since the PID namespace depends on the binary rather than
 on a kernel capability.
+
+### ADR-0022 — RustFun delegates container execution to runc, and reports honestly when it cannot
+**Context:** An OCI runtime needs namespaces, a mount tree, and cgroups. Reimplementing that is a
+container runtime, not a function platform, and every production host already ships `runc` (or
+`crun`). Worse, a runtime that is *installed but cannot run* — the common case inside a CI
+container without user namespaces — fails at invocation time with an opaque error.
+
+**Decision:** `rustfun-oci` implements the parts RustFun owns (reference parsing, pull, digest
+verification, caching, layer extraction, spec generation) and delegates `create`/`start`/`wait`/
+`delete` to `runc`. `is_available()` answers "can this host start a container right now?", probed
+once per process, and `discover` reports that rather than "the binary exists". The container runs
+on the **host** sandbox layer: the OCI spec creates the namespaces, and wrapping `runc` in the
+process sandbox would stop it from doing its job.
+
+**Alternatives:** Writing a container runtime (rejected: unbounded scope, worse than the
+incumbent); shelling out to `docker` (rejected: Docker-in-Docker needs privileges and adds a
+daemon to the trust boundary); silently treating an unusable runtime as available (rejected: it
+converts a clear capability gap into a confusing invocation failure).
+
+**Consequences:** Image management works everywhere and is fully tested; container execution works
+where the host allows it. Where it does not, `discover` says the runtime "cannot start a
+container here", `prepare` returns `Unavailable` with the remediation (`sysctl
+kernel.unprivileged_userns_clone=1` or run with `CAP_SYS_ADMIN`), and the conformance suite skips
+with that reason rather than passing quietly.
+
+### ADR-0023 — Digests are strict, and an image reference is not a filesystem path
+**Context:** Two small parsing decisions carry real security weight. A digest that parses
+leniently can also be *compared* leniently, which is how a wrong blob ends up cached under the
+right name. And an OCI handler that is really a path (`./bin/handler`) parses happily into a
+repository name, turning a clear operator mistake into a confusing registry error.
+
+**Decision:** `Digest::parse` accepts only `sha256:` followed by exactly 64 lowercase hex digits;
+uppercase is rejected rather than normalised. `ImageReference::parse` enforces the OCI repository
+grammar `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*` per path component, and only treats a leading segment
+as a registry when it looks like a host (starts alphanumeric and contains a dot, a port, or is
+`localhost`).
+
+**Consequences:** `./bin/handler` is a validation error naming the image-reference form, and a
+digest cannot be compared two ways. Localhost registries use plain HTTP, which is exactly the
+insecure case a test registry needs.

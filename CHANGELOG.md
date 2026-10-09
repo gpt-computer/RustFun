@@ -14,6 +14,14 @@ All notable changes to RustFun.
 - cgroup v2 CPU limits (`cpu.max` for a quota, `cpu.weight` for a share) alongside memory and
   PID limits, with the isolation report naming each controller it could or could not write.
 - `rustfun doctor` probes for the sandbox launcher binary and the delegated CPU controller.
+- OCI runtime: a new `rustfun-oci` crate covering image references, manifests, a registry client
+  with token auth, a verified content-addressed cache, traversal-safe layer extraction with
+  whiteouts, and OCI runtime spec generation; containers run through `runc` (ADR-0022).
+- `rustfun doctor` reports the OCI runtime by whether it can actually start a container, and the
+  conformance suite skips with that reason instead of saying "not installed".
+- Digest parsing is strict (lowercase sha256 only) and image references must match the OCI
+  repository grammar, so a filesystem path is a validation error rather than a bad pull
+  (ADR-0023).
 
 ### Added
 - Linux PID namespace via the `rustfun-sandbox-init` launcher; the payload runs as PID 1

@@ -402,9 +402,18 @@ impl Sandbox for LinuxSandbox {
                 }
             }
             None => {
+                // Naming the individual limits matters more than naming the hierarchy: an
+                // operator reading "cgroup_v2 skipped" cannot tell which resource is unbounded.
                 report = report
                     .skipped("cgroup_v2")
+                    .skipped("cgroup_memory")
                     .skipped("memory_limit_not_enforced_without_cgroups");
+                if request.resources.cpu.is_some() {
+                    report = report.skipped("cgroup_cpu");
+                }
+                if request.resources.max_processes.is_some() {
+                    report = report.skipped("cgroup_pids");
+                }
             }
         }
 

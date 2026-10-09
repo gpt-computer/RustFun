@@ -418,3 +418,63 @@ fn doctor_reports_the_launcher_and_the_cpu_controller() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `rustfun doctor` must report the OCI runtime, and its availability must mean "can start a
+/// container" rather than "the binary is on PATH".
+#[test]
+fn doctor_reports_the_oci_runtime_truthfully() {
+    let dir = workspace("doctor-oci");
+    let output = run(&dir, &["doctor", "--json"]);
+    assert_eq!(output.status, 0, "{}", output.stderr);
+    let report: serde_json::Value = serde_json::from_str(&output.stdout).expect("doctor json");
+    let runtimes = report["runtimes"].as_array().expect("runtime array");
+    let oci = runtimes
+        .iter()
+        .find(|row| {
+            row["runtime"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("oci"))
+        })
+        .expect("the oci runtime must be reported");
+    if !oci["available"].as_bool().unwrap_or(false) {
+        // An unusable runtime must say why, so an operator does not go hunting for a missing
+        // binary that is actually installed.
+        let version = oci["version"].as_str().unwrap_or_default();
+        assert!(
+            version.contains("cannot start") || version.contains("not installed"),
+            "an unavailable oci runtime must explain itself: {oci}"
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// An OCI function whose handler is a filesystem path must fail with a validation error that
+/// names the image-reference form.
+#[test]
+fn an_oci_handler_that_is_a_path_is_rejected() {
+    let dir = workspace("oci-handler");
+    let created = run(&dir, &["init", "oci-fn", "--template", "node"]);
+    assert_eq!(created.status, 0, "{}", created.stderr);
+
+    let manifest = dir.join("oci-fn/rustfun.toml");
+    let contents = std::fs::read_to_string(&manifest).expect("manifest");
+    std::fs::write(
+        &manifest,
+        contents
+            .replace("runtime = \"node@*\"", "runtime = \"oci@*\"")
+            .replace("handler = \"index.handler\"", "handler = \"./index.js\""),
+    )
+    .expect("rewrites");
+
+    let built = run(&dir, &["build", "oci-fn", "--json"]);
+    assert_eq!(built.status, 0, "build should succeed: {}", built.stderr);
+    let invoked = run(&dir, &["function", "invoke", "oci-fn", "--json"]);
+    assert_ne!(invoked.status, 0, "invoking an oci path handler must fail");
+    assert!(
+        invoked.stderr.contains("image reference") || invoked.stdout.contains("image reference"),
+        "the error must say what a valid handler looks like:\n{}{}",
+        invoked.stdout,
+        invoked.stderr
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
